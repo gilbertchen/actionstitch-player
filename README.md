@@ -1,8 +1,8 @@
 # ActionStitch Player
 
-This is an in-browser video player that can play 180&deg; videos such as those created by [ActionStitch](https://actionstitch.com).
+This is an in-browser video player that can play 180&deg; cylindrical videos such as those created by [ActionStitch](https://actionstitch.com).
 
-[Live demo](https://actionstitch.com/play.html?src=https://download.actionstitch.com/full-demo.mp4)
+[Demo](https://actionstitch.com/play.html?src=https://download.actionstitch.com/full-demo.mp4)
 
 It is recommended to open this player (which is a single html file) on the latest version of Chrome on a desktop computer.
 Other browsers may work too, but not functionalities are compatible.
