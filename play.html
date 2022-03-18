@@ -1,0 +1,950 @@
+<!doctype html>
+<html>
+
+
+<head>
+    <title>ActionStitch Player</title>
+
+    <!-- all code in this file is licensed under the GNU Affero General Public License -->
+    <link rel="license" href="https://www.gnu.org/licenses/agpl-3.0.html">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link href="https://vjs.zencdn.net/7.17.0/video-js.css" rel="stylesheet" />
+    <style>
+        #perspective-player {
+            width: 100%; height: 100%; position: absolute; top:0;
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            padding: 10px; /* Location of the box */
+            bottom: 50px;
+            right: 20px;
+            background-color: rgb(255, 255, 255); /* Fallback color */
+            background-color: rgba(255, 255, 255, 0.4); /* White w/ opacity */
+            z-index: 0;
+        }
+
+        .toolbar {
+            position: fixed; /* Stay in place */
+            padding: 10px; /* Location of the box */
+            top: 20px;
+            left: 20px;
+            color:rgb(181, 182, 190);
+            background-color: rgb(68, 70, 76);
+            z-index: 0;
+        }
+
+        .toolbar button {
+            width: 30px;
+        }
+
+
+    </style>
+</head>
+
+<body style="margin: 0px;">
+    <script src="https://vjs.zencdn.net/7.17.0/video.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tweakpane@3.0.5/dist/tweakpane.min.js"></script>
+
+    <div id="container" style="height:100vh">
+
+        <video id="as-video" class="video-js vjs-big-play-centered" crossorigin="anonymous" controls preload="auto" data-setup='{"fill":true, "playbackRates": [0.5, 1, 1.5, 2, 4, 8], "userActions":{"click":false}}'>
+            <p class="vjs-no-js">
+                To view this video please enable JavaScript, and consider upgrading to a web browser that
+                <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+            </p>
+
+        </video>
+
+        <div style="width: 100%; height: 100%; pointer-events: none; position: absolute; top:0; overflow: hidden ">
+            <canvas id="stage" style="overflow: hidden; position: absolute; display=none;"></canvas>
+        </div>
+
+        <div id="record-toolbar" class="toolbar tp-rotv" style="display: none">
+            <div>
+                <select id="resolution" onchange="selectResolution()">
+                    <option value="800x600">800x600</option>
+                    <option value="1024x768">1024x768</option>
+                    <option value="1280x720">1280x720</option>
+                    <option value="1920x1080">1920x1080</option>
+                    <option value="640x480">640x480</option>
+                </select>
+                <button id="addClipButton" onclick="addClip()"><i class="fa fa-plus"></i></button>
+                <button id="deleteClipButton" disabled onclick="deleteClip()"><i class="fa fa-times"></i></button>
+                <button id="replayButton" disabled onclick="startReplay(false)"><i class="fa fa-caret-right"></i></button>
+                <button id="recordButton" disabled onclick="startReplay(true)" style="color:darkred"><i class="fa fa-dot-circle"></i></button>
+                <button id="stopReplayButton" disabled onclick="stopReplay(false)"><i class="fas fa-square"></i></button>
+            </div>
+            <canvas id="capture" width="800" height="600" style="display: none; padding-top: 5px;"></canvas>
+        </div>
+
+        <div id="helpModal" class="modal">
+
+            <div class="modal-content">
+                <span id="helpCloseButton" class="close" style="float: right;">&times;</span>
+                <p>
+                    Mouse controls: <br>
+                    <ul>
+                        <li>Left click: play/pause </li>
+                        <li>Right click: fast forward 5 seconds</li>
+                        <li>Scroll: zoom in/out</li>
+                        <li>Move with left button pressed: pan/tilt</li>
+                    </ul>
+                </p>
+
+                <p>
+                    Keyboard controls: <br>
+                    <ul>
+                        <li>Left arrow: rewind 5 seconds</li>
+                        <li>Right arrow: fast forward 5 seconds</li>
+                        <li>Up arrow: step backward</li>
+                        <li>Down arrow: step forward</li>
+                        <li>Space: pause/resume<n/li>
+                        <li>Enter: adjust zoom to match native resolution (flat view only)</li>
+                    </ul>
+                </p>
+            </div>
+        </div>
+
+    </div>
+
+    <a id="downloadButton" download="hightlight.webm" style="display:none" target="_blank"></a>
+ 
+    <img id="flat-view-icon" style="display: none;" src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAQAAABKfvVzAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QAAKqNIzIAAAAHdElNRQflDAwCLQO/3K0TAAABe0lEQVQ4y93Sv2uTURTG8c+bNKSWiBoqVSoEbZWCP0CEIFKL6FSdRAQXF93d3QQnNweLf4AgCAqKbkIHQUSKFFxqkaLQgKYVoqHSxkCPg3lfE4rFVc9Z7oXvc8495z78+5Gkh/hLMNmAFwwoKujX1tK2arVb1pfhBRV7DTrktAPycsK6JS/MqKmbt5J1CDjnhqPyls2qaVrTp2SnI/bJW3TbHT86HcApx1w3Z8mihjXrKCoZttuQK665Z7nz/hBD8TTex2D4Q96MlagGcp36o0544Fs62u/sxKyms0SXYIcZbd1QJsYrdROKaYcBk95Z2OQb6j7aZSQVlJ2xoJFNlHHZLe+NPU6mgpyvqu67qNwNdoRFVXdd1e7QIXIxGrdiPloxHZdiOPLZdrbHeExFIz7F45iILSHJbJEYc9l5+02bU/NWxYiKcds89MhzrY1eShw26YIxNJT0++KJZ1763rOzHvvlbVV20HEfvPZZ81fltHbP0jezeOL/iZ9OhJGWX84ShAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMS0xMi0xMlQwMjo0NTowMyswMDowMA0lxrUAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjEtMTItMTJUMDI6NDU6MDMrMDA6MDB8eH4JAAAAPnRFWHRzdmc6Y29tbWVudAAgQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIP5FR7MAAAAASUVORK5CYII="/>
+    <img id="perspective-view-icon" style="display: none;" src="data:image/png;base64, iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAQAAABKfvVzAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QAAKqNIzIAAAAHdElNRQflDAwCMStsHli0AAAA3klEQVQ4y+2RIUtDURiGnyOTgQODYUUQnDaTZckfYFiQYVw2DLNgUn+HwWC+xb5qEpP4E4YwuGzTDRT0MdwdveM6psG25ysnvM/Hx3lhwT8Q4sNfBqeFbRosF7JjEp5itJSLr3LOPsOCsEaNU94kRGFyTosDrkniki+OaHFLApmC2ez44J1bUphde3ZcNy4WseKlI5tZJI8YPPbFC0t54dDUK1d+2I9Y9ca+e+Lk3g3OGNCj/f1rU3zQJXDCI2kmbFIm0GRpZg3vPFOlRhpAqFCnPLe5Pve8hvkdL/g7n3g7aKJER25QAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDIxLTEyLTEyVDAyOjQ5OjQzKzAwOjAwk1MowQAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyMS0xMi0xMlQwMjo0OTo0MyswMDowMOIOkH0AAAA+dEVYdHN2Zzpjb21tZW50ACBDcmVhdGVkIHdpdGggSW5rc2NhcGUgKGh0dHA6Ly93d3cuaW5rc2NhcGUub3JnLykg/kVHswAAAABJRU5ErkJggg=="/>
+ 
+</body>
+
+<script>
+
+var scale = 1;
+var centerX = 0;
+var centerY = 0;
+var mouseX = 0;
+var mouseY = 0;
+var mouseDown = false;
+var mouseMoved;
+
+var perspectiveMode = true;
+
+var video, player, capture, stage;
+
+var stageLeft, stageTop, stageWidth, stageHeight;
+
+var clips = [];
+/*var clips = [ {x: 4831, y: 782, scale: 1, time: 1171.920},
+              {x: 5988, y: 1018, scale: 1, time: 1178.644},
+              {x: 6795, y: 1396, scale: 1, time: 1183.205} ]; */
+var selectedClip = -1;
+var isResizingClip = false;
+var isReplaying = false;
+var mediaRecorder = null;
+var mediaStream;
+var isRecordingFinished = false;
+var captureWidth = 800;
+var captureHeight = 600;
+
+document.addEventListener('DOMContentLoaded', function() {
+
+    video = document.querySelector("video");
+    stage = document.getElementById("stage");
+    capture = document.getElementById("capture");
+
+    document.getElementById("replayButton").disabled = clips.length < 2;
+    document.getElementById("recordButton").disabled = clips.length < 2;
+
+    video.addEventListener("wheel", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        clientWidth = document.getElementById("as-video").clientWidth;
+        maxScale = videoWidth / clientWidth;
+
+        scale += event.deltaY * -0.01;
+        scale = Math.min(Math.max(1, scale), maxScale);
+
+        setTransform();
+    });
+
+    video.addEventListener("mousedown", function (event) {
+    	if (event.button != 0 || stage.style.display == "none") {
+            return;
+        }
+
+        mouseDown = true;
+        mouseMoved = false;
+        isResizingClip = false;
+
+        hit = hitClips(event.clientX, event.clientY);
+
+        if (hit >= 0) {
+            selectedClip = hit;
+            drawClips();
+            mouseMoved = true;
+            if (isResizingClip) {
+                video.style.cursor="nwse-resize";
+            } else {
+                video.style.cursor="move";
+            }
+        } else {
+            if (selectedClip >= 0) {
+                selectedClip = -1;
+                drawClips();
+                mouseMoved = true;
+            }
+            video.style.cursor="auto";
+        }
+
+        mouseX = event.clientX;
+        mouseY = event.clientY;
+    });
+
+    video.addEventListener("mouseup", function (event) {
+        if (mouseDown) {
+            mouseDown = false;
+            if (mouseMoved) {
+                if (selectedClip >= 0 && video.currentTime != clips[selectedClip].time) {
+                    video.currentTime = clips[selectedClip].time;
+                }
+            } else {
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            }
+            mouseMoved = false;
+            document.getElementById("deleteClipButton").disabled = selectedClip < 0;
+        }
+        video.style.cursor="auto";
+
+    });
+
+    video.addEventListener("mousemove", function (event) {
+        if (!mouseDown) {
+            return;
+        }
+        mouseMoved = true;
+
+        if (selectedClip >= 0) {
+            if (isResizingClip) {
+                clips[selectedClip].scale += (event.clientX - mouseX) * 0.01;
+                if (clips[selectedClip].scale < 1) {
+                    clips[selectedClip].scale = 1;
+                }
+            } else {
+                clips[selectedClip].x += (event.clientX - mouseX) * scale;
+                clips[selectedClip].y += (event.clientY - mouseY) * scale;
+            }
+            mouseX = event.clientX;
+            mouseY = event.clientY;
+            drawClips();
+            return;
+        }
+
+        centerX -= (event.clientX - mouseX) * scale;
+        centerY -= (event.clientY - mouseY) * scale;
+        mouseX = event.clientX;
+        mouseY = event.clientY;
+        setTransform();
+    });
+
+    window.addEventListener("keydown", onKeyDown);
+
+    video.addEventListener("contextmenu", function (event) {
+        this.currentTime = this.currentTime + 5;
+        event.preventDefault();
+        event.stopPropagation();
+    });
+
+    player = videojs("as-video");
+    player.el().style.overflow = 'hidden';
+
+    var search = window.location.search;
+    if (search.startsWith("?src=")) {
+        player.src(search.substring(5));
+        if (search.startsWith("?src=h")) {
+            player.setAttribute('crossorigin', 'anonymous');
+        }
+    } else {
+        player.src("demo.mp4");
+    }
+
+    var backwardButton = player.controlBar.addChild("button", {}, 0);
+    var backwardButtonDom = backwardButton.el();
+    backwardButtonDom.innerHTML = '<i class="fas fa-backward"></i>';
+    backwardButtonDom.onclick = function(){
+        video.currentTime = video.currentTime - 5;
+    };
+
+    var fowardButton = player.controlBar.addChild("button", {}, 2);
+    var fowardButtonDom = fowardButton.el();
+    fowardButtonDom.innerHTML = '<i class="fas fa-forward"></i>';
+    fowardButtonDom.onclick = function(){
+        video.currentTime = video.currentTime + 5;
+    };
+
+    var viewButton = player.controlBar.addChild("button");
+    var viewButtonDom = viewButton.el();
+    viewButtonDom.id = "viewButton";
+
+    viewButtonDom.onclick = function(){
+
+        switchView();
+
+    };
+
+    var recordToggleButton = player.controlBar.addChild("button");
+    var recordToggleButtonDom = recordToggleButton.el();
+    recordToggleButtonDom.innerHTML = '<i class="far fa-dot-circle"></i>';
+    recordToggleButtonDom.onclick = function() {
+        recordToolbar = document.getElementById("record-toolbar");
+        if (recordToolbar.style.display == "none") {
+            recordToolbar.style.display = "block";
+            if (perspectiveMode) {
+                addPerspectiveClips();
+            } else {
+                stage.style.display = "block";
+                drawClips();
+            }
+        } else {
+            recordToolbar.style.display = "none";
+            if (perspectiveMode) {
+                removePerspectiveClips();
+            } else {
+                stage.style.display = "none";
+            }
+        }
+    };
+
+    var helpModal = document.getElementById("helpModal");
+    var helpCloseButton = document.getElementById("helpCloseButton");
+
+    var helpButton = player.controlBar.addChild("button");
+    var helpButtonDom = helpButton.el();
+    helpButtonDom.innerHTML = "?";
+    helpButtonDom.onclick = function(){
+        helpModal.style.display = "block";
+    }
+
+    helpCloseButton.onclick = function() {
+        helpModal.style.display = "none";
+    }
+
+    video.addEventListener("loadedmetadata", function () {
+        videoWidth = videojs("as-video").videoWidth();
+        videoHeight = videojs("as-video").videoHeight();
+
+        stage.width = videoWidth;
+        stage.height = videoHeight;
+        stage.style.width = (document.getElementById("as-video").clientWidth).toString() + "px";
+        stage.style.height = (document.getElementById("as-video").clientWidth * videoHeight /videoWidth).toString() + "px";
+
+        centerX = videoWidth / 2;
+        centerY = videoHeight / 2;
+        scale = videoWidth / document.getElementById("as-video").clientWidth;
+
+        setTransform();
+
+        initPerspectiveMode();
+        switchView();
+    });
+
+});
+
+var perspectiveClips = [];
+
+function removePerspectiveClips() {
+    for (i = 0; i < perspectiveClips.length; i++) {            
+        scene.remove(perspectiveClips[i]);
+        perspectiveClips[i].geometry.dispose();
+        perspectiveClips[i].material.dispose();
+    }
+    perspectiveClips = [];
+}
+
+function getPerspectiveClipPosition(i) {
+    w = captureWidth * clips[i].scale;
+    h = captureHeight * clips[i].scale;
+
+    a = (clips[i].x - videoWidth / 2) / controls.focalLength;
+
+    r = Math.cos(a / 2);
+    x = controls.focalLength * Math.cos(a) * r;
+    y = (clips[i].y - videoHeight / 2) * r;
+    z = controls.focalLength * Math.sin(a) * r;
+
+    t = controls.screenRotation / 180 * Math.PI;
+    x2 = x * Math.cos(t) - y * Math.sin(t);
+    y2 = x * Math.sin(t) + y * Math.cos(t);
+    return [-x2, -y2, -z];
+}
+
+function addPerspectiveClips() {
+
+    for (i = 0; i < clips.length; i++) {
+        
+        position = getPerspectiveClipPosition(i);
+
+        v = clips[i].y - videoHeight / 2;
+
+        radius = controls.focalLength * 0.9;
+        w = captureWidth * clips[i].scale / controls.focalLength;
+
+        m = (Math.PI - (videoWidth - 2 * clips[i].x) / controls.focalLength) / 2;
+        //m = clips[i].x / videoWidth * Math.PI;
+        geometry = new THREE.CylinderGeometry(radius, radius, captureHeight * clips[i].scale, 64, 64, true, m - w / 2, w);
+        geometry.scale(-1, 1, 1);
+        material = new THREE.MeshBasicMaterial({ color: 0x000080, transparent: true, opacity: 0.5 });
+        clip = new THREE.Mesh(geometry, material);
+        clip.position.y = videoHeight / 2 - clips[i].y;
+        clip.rotation.z = THREE.MathUtils.degToRad(controls.screenRotation);
+        scene.add(clip);
+        perspectiveClips.push(clip);
+    }
+
+}
+function switchView() {
+    viewButtonDom = document.getElementById("viewButton");
+    recordToolbar = document.getElementById("record-toolbar");
+    if (perspectiveMode) {
+        video.style.display = "block";
+        stage.style.display = "block";
+        if (recordToolbar.style.display == "block") {
+            stage.style.display = "block";
+            drawClips();
+        }
+        document.getElementById('perspective-player').style.display = "none";
+        pane.hidden = true;
+        perspectiveMode = false;
+        viewButtonDom.innerHTML = "<img src='" + document.getElementById("perspective-view-icon").src + "'</img>"
+        viewButtonDom.title = "Perspective view";
+        setTransform();        
+    } else {
+
+        removePerspectiveClips();
+        if (recordToolbar.style.display == "block") {
+            addPerspectiveClips();
+        }
+
+        video.style.display = "none";
+        stage.style.display = "none";
+        document.getElementById('perspective-player').style.display = "block";
+        pane.hidden = false;
+        viewButtonDom.innerHTML = "<img src='" + document.getElementById("flat-view-icon").src + "'</img>"
+        viewButtonDom.title = "Flat view";
+        perspectiveMode = true;
+        updatePerspectiveView();
+    }
+}
+
+function selectResolution() {
+    selected = document.getElementById("resolution");
+    s = selected.value.split("x");
+    captureWidth = parseInt(s[0]);
+    captureHeight = parseInt(s[1]);
+    capture.width = captureWidth;
+    capture.height = captureHeight;
+    capture.style.width = captureWidth.toString() + "px";
+    capture.style.height = captureHeight.toString() + "px";
+    drawClips();
+}
+
+function setTransform() {
+
+    clientWidth = document.getElementById("as-video").clientWidth;
+    clientHeight = document.getElementById("as-video").clientHeight;
+    reversedScale = videoWidth / clientWidth / scale;
+
+    if (isReplaying) {
+        for (i = 0; i < clips.length; i++) {
+            if (clips[i].time > video.currentTime) {
+                break;
+            }
+        }
+        if (i == 0 || i == clips.length) {
+            return;
+        }
+
+        r = (video.currentTime - clips[i - 1].time) / (clips[i].time - clips[i - 1].time);
+        centerX = clips[i - 1].x + r * (clips[i].x - clips[i - 1].x);
+        centerY = clips[i - 1].y + r * (clips[i].y - clips[i - 1].y);
+        replayScale = clips[i - 1].scale + r * (clips[i].scale - clips[i - 1].scale);
+        scale = 1;
+
+        context = capture.getContext("2d");
+        context.drawImage(video, centerX - captureWidth * replayScale / 2, centerY - captureHeight * replayScale / 2, captureWidth * replayScale, captureHeight * replayScale, 0, 0, captureWidth, captureHeight);
+
+        video.style.transform = `translate(0px, 0px) scale(1)`;
+
+    } else {
+
+        centerX = Math.max(centerX, clientWidth / 2 * scale);
+        centerX = Math.min(centerX, videoWidth - clientWidth / 2 * scale);
+
+        if (clientHeight > videoHeight / scale) {
+            centerY = videoHeight / 2;
+        } else {
+            centerY = Math.max(centerY, clientHeight / 2 * scale);
+            centerY = Math.min(centerY, videoHeight - clientHeight / 2 * scale);
+        }
+        translateX = (videoWidth / 2 - centerX) / scale;
+        translateY = (videoHeight / 2 - centerY) / scale;
+
+        video.style.transform = `translate(${translateX}px, ${translateY}px) scale(${reversedScale})`;
+    }
+
+    rect = video.getBoundingClientRect();
+    stageLeft = rect.x;
+    stageTop = rect.y;
+    stageWidth = rect.width;
+    stageHeight = rect.height;
+    if (stageHeight > stageWidth * videoHeight / videoWidth) {
+        stageTop += (stageHeight - stageWidth * videoHeight / videoWidth) / 2;
+        stageHeight = stageWidth * videoHeight / videoWidth;
+    }
+
+    stage.style.left = stageLeft.toString() + "px";
+    stage.style.top = stageTop.toString() + "px";
+    stage.style.width = stageWidth.toString() + "px";
+    stage.style.height = stageHeight.toString() + "px";
+
+    if (!isReplaying) {
+        drawClips();
+    }
+
+}
+
+function getStageX(eventX) {
+    return (eventX - stageLeft) * videoWidth / stageWidth;
+}
+
+function getStageY(eventY) {
+    return (eventY - stageTop) * videoHeight / stageHeight;
+}
+
+function hitClips(eventX, eventY) {
+    stageX = getStageX(eventX);
+    stageY = getStageY(eventY);
+    for (let i = clips.length - 1; i >= 0 ; i--) {
+        w = clips[i].scale * captureWidth;
+        h = clips[i].scale * captureHeight;
+        if (stageX >= clips[i].x - w / 2 && stageX <= clips[i].x + w /2 && stageY >= clips[i].y - h / 2 && stageY <= clips[i].y + h / 2) {
+            if (clips[i].x + w / 2 - stageX < 15 * scale && clips[i].y + h / 2 - stageY < 15 * scale) {
+                isResizingClip = true;
+            }
+            return i;
+        }
+    }
+    return -1;
+}
+
+function drawClips() {
+    context = stage.getContext("2d");
+    context.clearRect(0, 0, videoWidth, videoHeight);
+    context.font = '64px serif';
+
+    for (let i = 0; i < clips.length; i++) {
+        context.fillStyle = "#00008040";
+        w = clips[i].scale * captureWidth;
+        h = clips[i].scale * captureHeight;
+        context.fillRect(clips[i].x - w / 2, clips[i].y - h / 2, w, h);
+        context.fillStyle = "#ffffff";
+        context.fillText((i+1).toString(), clips[i].x, clips[i].y);
+
+        s = clips[i].scale.toFixed(2);
+        m = context.measureText(s);
+        context.fillStyle = "#ffffff";
+        context.fillText(s, clips[i].x + w / 2 - 5 - m.width, clips[i].y - h / 2 + 5 + m.fontBoundingBoxAscent + m.fontBoundingBoxDescent);
+        hour = Math.floor(clips[i].time / 3600);
+        minute = Math.floor(clips[i].time / 60).toString().padStart(2, 0)
+        second = Math.floor(clips[i].time % 60).toString().padStart(2, 0)
+        milli = Math.floor((clips[i].time % 1) * 1000).toString().padStart(3, 0)
+        context.fillStyle = "#ffffff";
+        context.fillText(hour + ":" + minute + ":" + second + "." + milli, clips[i].x - w / 2 + 5, clips[i].y - h / 2 + 5 + m.fontBoundingBoxAscent + m.fontBoundingBoxDescent);
+
+        if (i == selectedClip) {
+            context.beginPath();
+            context.rect(clips[i].x - w / 2 - 1, clips[i].y - h / 2 - 1, w + 3, h + 3);
+            context.lineWidth = 4;
+            context.strokeStyle = "white";
+            context.stroke();
+        }
+    }
+}
+
+function addClip() {
+    video.pause();
+
+    clip = {x: centerX, y: centerY, scale: 1, time: video.currentTime };
+    for (i = 0; i < clips.length; i++) {
+        if (clip.time == clips[i].time) {
+            clips.splice(i, 1, clip);
+            break;
+        } else if (clip.time < clips[i].time) {
+            clips.splice(i, 0, clip);
+            break;
+        }
+    }
+    if (i == clips.length) {
+        clips.push(clip);
+    }
+
+    drawClips();
+
+    document.getElementById("replayButton").disabled = clips.length < 2;
+    document.getElementById("recordButton").disabled = clips.length < 2;
+}
+
+function deleteClip() {
+    if (selectedClip < 0) {
+        return;
+    }
+
+    clips.splice(selectedClip, 1);
+    drawClips();
+
+    document.getElementById("replayButton").disabled = clips.length < 2;
+    document.getElementById("recordButton").disabled = clips.length < 2;
+
+}
+
+function startReplay(isRecording) {
+
+    if (isRecording) {
+
+        isRecordingFinished = false;
+        var recordedChunks = [];
+
+        if (navigator.userAgent.indexOf('Firefox') > -1) {
+            mediaStream = capture.captureStream(30 * video.playbackRate);
+            mediaRecorder = new MediaRecorder(mediaStream, { mimeType: "video/webm;codecs:vp9" });
+        } else {
+            mediaStream = capture.captureStream(30 * video.playbackRate);
+            mediaRecorder = new MediaRecorder(mediaStream, { mimeType: "video/webm;codecs=h264" });
+        }
+        mediaRecorder.ondataavailable = function handleDataAvailable(event) {
+            console.log("media recorder data available");
+            if (event.data.size > 0 && isRecordingFinished) {
+                recordedChunks.push(event.data);
+                var blob = new Blob(recordedChunks, { type: "video/webm" });
+                var url = URL.createObjectURL(blob);
+                var a = document.getElementById("downloadButton");
+                a.href = url;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            }
+        }
+        mediaRecorder.start();
+
+    }
+
+    if (perspectiveMode) {
+        removePerspectiveClips();
+    }
+
+    document.getElementById("addClipButton").disabled = true;
+    document.getElementById("deleteClipButton").disabled = true;
+    document.getElementById("replayButton").disabled = true;
+    document.getElementById("recordButton").disabled = true;
+    document.getElementById("stopReplayButton").disabled = false;
+    stage.style.display = "none";
+    capture.style.display = "block";
+    isReplaying = true;
+    setTransform();
+    video.currentTime = clips[0].time;
+    video.play();
+
+    if (!perspectiveMode) {
+        updateFlatView();
+    }
+
+}
+
+
+function updateFlatView() {
+
+    if (!isReplaying) {
+        return;
+    }
+   
+    if (clips.length > 0 && video.currentTime > clips[clips.length - 1].time) {
+        stopReplay(true);
+        return;
+    } else {
+        setTransform();
+    }
+
+    requestAnimationFrame(updateFlatView);
+}
+
+function stopReplay(isFinished) {
+
+    isRecordingFinished = isFinished;
+    if (mediaRecorder !== null) {
+        mediaRecorder.stop();
+        mediaRecorder = null;
+    }
+
+    document.getElementById("addClipButton").disabled = false;
+    document.getElementById("replayButton").disabled = false;
+    document.getElementById("recordButton").disabled = false;
+    document.getElementById("stopReplayButton").disabled = true;
+    stage.style.display = "block";
+    capture.style.display = "none";
+    video.pause();
+    selectedClip = -1;
+    isReplaying = false;
+    scale = videoWidth / document.getElementById("as-video").clientWidth;
+    setTransform();
+    drawClips();
+
+    if (perspectiveMode) {
+        addPerspectiveClips();
+    }
+
+}
+
+var camera, scene, renderer, screen, pane;
+var longitude = 0, latitude = 0;
+var originalLongitude, originalLatitude;
+
+var controls = {
+    screenRotation: 0,
+    cameraY: 0,
+    focalLength: 2400
+}
+
+function initPerspectiveMode() {
+
+    video.style.display = "none";
+
+    camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 2 * videoWidth);
+
+    scene = new THREE.Scene();
+
+    screen = createScreen();
+    scene.add(screen);
+
+    renderer = new THREE.WebGLRenderer();
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0xc0c0c0, 1);
+    renderer.domElement.focus();
+    renderer.domElement.id = "perspective-player";
+    document.getElementById('as-video').prepend(renderer.domElement);
+
+    renderer.domElement.addEventListener("wheel", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        fov = camera.fov;
+        fov += event.deltaY * -0.1;
+        camera.fov = Math.min(Math.max(5, fov), 90);
+        camera.updateProjectionMatrix();
+    });
+
+    renderer.domElement.addEventListener('mousedown', function (event) {
+    	if (event.button != 0) {
+            return;
+        }
+        mouseDown = true;
+        mouseMoved = false;
+
+        mouseX = event.clientX;
+        mouseY = event.clientY;
+
+        originalLatitude = latitude;
+        originalLongitude = longitude
+
+    });
+
+    renderer.domElement.addEventListener('mousemove', function(event) {
+        if (mouseDown) {
+            mouseMoved = true;
+            longitude = (mouseX - event.clientX) * 0.1 + originalLongitude;
+            latitude = (mouseY - event.clientY) * 0.1 + originalLatitude;
+        }
+    });
+
+    renderer.domElement.addEventListener('mouseup', function() {
+        if (mouseDown) {
+            mouseDown = false;
+            if (!mouseMoved) {
+                if (video.paused) {
+                    video.play();
+                } else {
+                    video.pause();
+                }
+            }
+        }
+    });
+
+    renderer.domElement.addEventListener("contextmenu", function (event) {
+        video.currentTime = video.currentTime + 5;
+        event.preventDefault();
+        event.stopPropagation();
+    });
+
+    window.addEventListener('resize', function() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        scale = videoWidth / document.getElementById("as-video").clientWidth;
+        setTransform();
+
+    });
+
+    pane = new Tweakpane.Pane();
+    viewPane = pane.addFolder({ title: "View"});
+    viewPane.addInput(controls, "cameraY", {min: -500, max: 500, step:10, label: "Camera height"});
+    viewPane.addInput(controls, "screenRotation", {min: -30, max: 30, step: 1, label: "Screen tilt"}).on('change', function() {
+        screen.rotation.z = THREE.MathUtils.degToRad(controls.screenRotation);
+        for (i = 0; i < perspectiveClips.length; i++) {
+            perspectiveClips[i].rotation.z = THREE.MathUtils.degToRad(controls.screenRotation);
+        }
+    });
+    viewPane.addInput(controls, "focalLength", {min: 1000, max: 5000, step: 50, label: "Focal length"}).on('change', function(){
+        removePerspectiveClips();
+        addPerspectiveClips();
+        scene.remove(screen);
+        screen.geometry.dispose();
+        screen.material.dispose();
+        screen = createScreen();
+        scene.add(screen);
+    });
+
+}
+
+function onKeyDown(event) {
+
+    if (event.keyCode == 39) {
+        video.currentTime = video.currentTime + (event.shiftKey ? 20 : 5);
+        event.preventDefault();
+        event.stopPropagation();
+    } else if (event.keyCode == 37) {
+        video.currentTime = video.currentTime - (event.shiftKey ? 20 : 5);
+        event.preventDefault();
+        event.stopPropagation();
+    } else if (event.keyCode == 38) {
+        video.currentTime = video.currentTime - 1.0/30;
+        event.preventDefault();
+        event.stopPropagation();
+    } else if (event.keyCode == 40) {
+        video.currentTime = video.currentTime + 1.0/30;
+        event.preventDefault();
+        event.stopPropagation();
+    } else if (event.keyCode == 32) {
+        if (video.paused) {
+            video.play();
+        } else {
+            video.pause();
+        }
+        event.preventDefault();
+        event.stopPropagation();
+    } else if (event.keyCode == 13) {
+        if (perspectiveMode) {
+        } else {
+            scale = 1;
+            setTransform();
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }
+}
+
+function createScreen() {
+    s = videoWidth / controls.focalLength;
+    var geometry = new THREE.CylinderGeometry(controls.focalLength, controls.focalLength, videoHeight, 512, 512, true, Math.PI / 2 - s / 2, s);
+    geometry.scale(-1, 1, 1);
+
+    var texture = new THREE.VideoTexture(video);
+    var material = new THREE.MeshBasicMaterial({ map: texture });
+
+    return new THREE.Mesh(geometry, material);
+}
+
+function updatePerspectiveView() {
+
+    if (!perspectiveMode) {
+        return;
+    }
+
+    var screenWidth, screenHeight;
+
+    if (isReplaying) {
+        for (i = 0; i < clips.length; i++) {
+            if (clips[i].time > video.currentTime) {
+                break;
+            }
+        }
+        if (i == 0 || i == clips.length) {
+            stopReplay(true);
+            requestAnimationFrame(updatePerspectiveView);
+            return;
+        }
+
+        r = (video.currentTime - clips[i - 1].time) / (clips[i].time - clips[i - 1].time);
+        centerX = clips[i - 1].x + r * (clips[i].x - clips[i - 1].x);
+        centerY = clips[i - 1].y + r * (clips[i].y - clips[i - 1].y);
+        replayScale = clips[i - 1].scale + r * (clips[i].scale - clips[i - 1].scale);
+
+        a = (centerX - videoWidth / 2) / controls.focalLength;
+
+        x = controls.focalLength * Math.cos(a);
+        y = centerY - videoHeight / 2;
+        z = controls.focalLength * Math.sin(a);
+
+        t = controls.screenRotation / 180 * Math.PI;
+        x2 = x * Math.cos(t) - y * Math.sin(t);
+        y2 = x * Math.sin(t) + y * Math.cos(t);
+
+        if (renderer.domElement.width / renderer.domElement.height > captureWidth / captureHeight) {
+            screenHeight = renderer.domElement.height;
+            screenWidth = screenHeight * captureWidth / captureHeight;
+            a = replayScale * captureWidth / renderer.getPixelRatio() / controls.focalLength;
+            camera.fov = renderer.domElement.width / screenWidth * a / Math.PI * 180;
+        } else {
+            camera.fov = replayScale * captureWidth / renderer.getPixelRatio() / controls.focalLength / Math.PI * 180;
+            screenWidth = renderer.domElement.width;
+            screenHeight = screenWidth / captureWidth * captureHeight;
+        }
+        camera.position.set(0, controls.cameraY, 0);
+        camera.lookAt(-x2, -y2 + controls.cameraY, -z);
+        camera.updateProjectionMatrix();
+
+    } else {
+        latitude = Math.max(- 85, Math.min(85, latitude));
+        longitude = Math.max(- 85, Math.min(85, longitude));
+        phi = THREE.MathUtils.degToRad(90 - latitude);
+        theta = THREE.MathUtils.degToRad(longitude);
+
+        x = - controls.focalLength * Math.sin(phi) * Math.cos(theta);
+        y = - controls.focalLength * Math.cos(phi);
+        z = - controls.focalLength * Math.sin(phi) * Math.sin(theta);
+
+        camera.position.set(0, controls.cameraY, 0);
+        camera.lookAt(x, y + controls.cameraY, z);
+    }
+
+    renderer.render(scene, camera);
+
+    if (isReplaying) {
+        context = capture.getContext("2d");
+        context.drawImage(renderer.domElement, renderer.domElement.width / 2 - screenWidth / 2, renderer.domElement.height / 2 - screenHeight / 2,
+                          screenWidth, screenHeight, 0, 0, captureWidth, captureHeight);
+    }
+
+    requestAnimationFrame(updatePerspectiveView);
+
+}
+
+</script>
+
+
+</html>
+
