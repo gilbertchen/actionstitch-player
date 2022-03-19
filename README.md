@@ -44,7 +44,9 @@ It is recommended to open this player in the latest version of Chrome on a deskt
 
 ## Perspective Mode
 
-You can enable the perspective mode by clicking the ![perspective view](img/perspective_mode.png) button on the bottom control bar.
+You can enable the perspective mode by clicking the 
+<img src="https://github.com/gilbertchen/actionstitch-player/raw/main/img/perspective_mode.png" alt="perspective view" style="max-width: 25%;"> 
+button on the bottom control bar.
 This mode provides a more realistitc view as if you're watching the field through a pan/tilt/zoom camera.
 You can also adjust a few viewpoint parameters using the sliding controls on the top right corner.
 
