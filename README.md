@@ -10,7 +10,7 @@ This is an in-browser video player that can play 180&deg; cylindrical videos suc
 To use this player, upload the file `play.html` to a cloud storage service so that it can be public accessible in the browser.  Then append the url to the video file that you want to open in this form:
 
 ```
-https://example.com/play.html?src=https://video_url
+https://actionstitch.com/play.html?src=https://video_url
 ```
 
 You can also store `play.html` locally to open on-disk video files:
