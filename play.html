@@ -50,7 +50,7 @@
 
     <div id="container" style="height:100vh">
 
-        <video id="as-video" class="video-js vjs-big-play-centered" crossorigin="anonymous" controls preload="auto" data-setup='{"fill":true, "playbackRates": [0.5, 1, 1.5, 2, 4, 8], "userActions":{"click":false}}'>
+        <video id="as-video" class="video-js vjs-big-play-centered" controls preload="auto" data-setup='{"fill":true, "playbackRates": [0.5, 1, 1.5, 2, 4, 8], "userActions":{"click":false}}'>
             <p class="vjs-no-js">
                 To view this video please enable JavaScript, and consider upgrading to a web browser that
                 <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
@@ -265,9 +265,6 @@ document.addEventListener('DOMContentLoaded', function() {
     var search = window.location.search;
     if (search.startsWith("?src=")) {
         player.src(search.substring(5));
-        if (search.startsWith("?src=h")) {
-            player.setAttribute('crossorigin', 'anonymous');
-        }
     } else {
         player.src("demo.mp4");
     }
